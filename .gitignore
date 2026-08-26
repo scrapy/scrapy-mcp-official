@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.tox/
+dist/
+build/
+.pytest_cache/
+uv.lock
+.idea/
+.vscode/
+.coverage
+coverage.*
+*.junit.xml
