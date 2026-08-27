@@ -1,0 +1,218 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scrapy-mcp-official"
+version = "0.1.0"
+description = "An MCP server that attaches an agent to a live Scrapy crawl and runs Python inside it"
+authors = [{ name = "Scrapy developers", email = "opensource@zyte.com" }]
+maintainers = [{ name = "Scrapy developers", email = "opensource@zyte.com" }]
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Scrapy",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "aiohttp>=3.9",
+    "mcp>=2.0.1,<3",
+    "platformdirs>=2.0",
+]
+
+[project.scripts]
+scrapy-mcp = "scrapy_mcp.mcp_server:main"
+
+[project.urls]
+Homepage = "https://github.com/scrapy/scrapy-mcp-official"
+Source = "https://github.com/scrapy/scrapy-mcp-official"
+Tracker = "https://github.com/scrapy/scrapy-mcp-official/issues"
+Docs = "https://github.com/scrapy/scrapy-mcp-official/blob/main/README.md"
+"Release notes" = "https://github.com/scrapy/scrapy-mcp-official/blob/main/CHANGELOG.rst"
+
+[dependency-groups]
+tests = [
+    "pytest>=9",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+]
+dev = [
+    { include-group = "tests" },
+    "pre-commit>=4.6.2",
+    "ruff>=0.16.4",
+    "tox>=4.25",
+    "tox-uv",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/CHANGELOG.rst",
+    "/tox.toml",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scrapy_mcp"]
+
+[tool.bumpversion]
+commit = true
+tag = true
+tag_name = "{new_version}"
+
+[[tool.bumpversion.files]]
+filename = 'CHANGELOG.rst'
+search = "\\(unreleased\\)$"
+replace = "({now:%Y-%m-%d})"
+regex = true
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.paths]
+source = [
+    "src/scrapy_mcp",
+    ".tox/**/site-packages/scrapy_mcp"
+]
+
+[tool.coverage.report]
+exclude_also = [
+    'if __name__ == "__main__":',
+]
+
+[tool.mypy]
+strict = true
+
+[tool.pytest]
+addopts = ["--import-mode=importlib"]
+asyncio_mode = "auto"
+strict = true
+
+[tool.ruff.lint]
+extend-select = [
+    # flake8-builtins
+    "A",
+    # flake8-async
+    "ASYNC",
+    # flake8-comprehensions
+    "C4",
+    # flake8-commas
+    "COM",
+    # pydocstyle
+    "D",
+    # flake8-future-annotations
+    "FA",
+    # flynt
+    "FLY",
+    # refurb
+    "FURB",
+    # isort
+    "I",
+    # flake8-implicit-str-concat
+    "ISC",
+    # flake8-logging
+    "LOG",
+    # Perflint
+    "PERF",
+    # pygrep-hooks
+    "PGH",
+    # flake8-pie
+    "PIE",
+    # pylint
+    "PL",
+    # flake8-pytest-style
+    "PT",
+    # flake8-use-pathlib
+    "PTH",
+    # flake8-pyi
+    "PYI",
+    # flake8-quotes
+    "Q",
+    # flake8-return
+    "RET",
+    # flake8-raise
+    "RSE",
+    # flake8-bandit
+    "S",
+    # flake8-simplify
+    "SIM",
+    # flake8-slots
+    "SLOT",
+    # flake8-debugger
+    "T10",
+    # flake8-type-checking
+    "TC",
+    # flake8-tidy-imports
+    "TID",
+    # pycodestyle warnings
+    "W",
+    # flake8-2020
+    "YTT",
+]
+ignore = [
+    # Trailing comma missing
+    "COM812",
+    # Missing docstring in public module
+    "D100",
+    # Missing docstring in public class
+    "D101",
+    # Missing docstring in public method
+    "D102",
+    # Missing docstring in public function
+    "D103",
+    # Missing docstring in public package
+    "D104",
+    # Missing docstring in magic method
+    "D105",
+    # Missing docstring in public nested class
+    "D106",
+    # Missing docstring in __init__
+    "D107",
+    # One-line docstring should fit on one line with quotes
+    "D200",
+    # No blank lines allowed after function docstring
+    "D202",
+    # 1 blank line required between summary line and description
+    "D205",
+    # Multi-line docstring closing quotes should be on a separate line
+    "D209",
+    # First line should end with a period
+    "D400",
+    # First line should be in imperative mood; try rephrasing
+    "D401",
+    # First line should not be the function's "signature"
+    "D402",
+    # First word of the first line should be properly capitalized
+    "D403",
+    # Too many arguments in function definition
+    "PLR0913",
+    # Magic value used in comparison
+    "PLR2004",
+    # Use of `assert` detected
+    "S101",
+]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
