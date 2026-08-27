@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import psutil
 from platformdirs import user_state_dir
 
 #: The one on-disk format this server knows how to read, mirroring Scrapy's
@@ -110,7 +110,7 @@ class JobRegistry:
             info = JobFile(path).read()
             if info is None:
                 continue
-            if info.pid is None or not _pid_alive(info.pid):
+            if info.pid is None or not psutil.pid_exists(info.pid):
                 continue
             out.append(info)
         return out
@@ -123,15 +123,3 @@ class JobRegistry:
         if not info.supported:
             raise UnsupportedJobFile(f"{job_id}: unsupported job file format")
         return info
-
-
-def _pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True  # exists, owned by someone else
-    except OSError:
-        return False
-    return True

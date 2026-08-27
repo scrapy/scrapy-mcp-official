@@ -12,7 +12,6 @@ from scrapy_mcp.job_files import (
     JobNotFound,
     JobRegistry,
     UnsupportedJobFile,
-    _pid_alive,
     default_jobs_dir,
 )
 
@@ -144,20 +143,3 @@ def test_default_jobs_dir() -> None:
     path = default_jobs_dir()
     assert path.name == "job_files"
     assert "scrapy" in path.parts
-
-
-@pytest.mark.parametrize(
-    ("error", "alive"),
-    [
-        (PermissionError, True),  # exists, owned by someone else
-        (OSError, False),
-    ],
-)
-def test_pid_alive_kill_errors(
-    monkeypatch: pytest.MonkeyPatch, error: type[OSError], alive: bool
-) -> None:
-    def kill(pid: int, sig: int) -> None:
-        raise error
-
-    monkeypatch.setattr(os, "kill", kill)
-    assert _pid_alive(1234) is alive
