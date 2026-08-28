@@ -20,14 +20,14 @@ crawler
 ├── extensions → .middlewares
 └── engine                      (None until the crawl runs)
     ├── running · paused · start_time · spider · pause()/unpause()
-    ├── _slot.scheduler          (private but readable)
+    ├── scheduler
     ├── downloader → active · slots · *_concurrency · middleware.middlewares · handlers
     └── scraper    → slot · spidermw.middlewares · itemproc.middlewares
 ```
 
 ## Inspection surface
 - **Engine** (`crawler.engine`) — `running`, `paused`, `start_time` (`time.time()-start_time` = uptime), `spider`. Fetch a URL: `await engine.download_async(req)` (`download()` deprecated).
-- **Scheduler** (`engine._slot.scheduler`) — `len(...)` = pending backlog, `has_pending_requests()`, `mqs` (memory), `dqs` (disk; `None` unless `JOBDIR`), `df` (dupefilter), `stats`. (See *Scheduler queues*.)
+- **Scheduler** (`engine.scheduler`) — `len(...)` = pending backlog, `has_pending_requests()`, `mqs` (memory), `dqs` (disk; `None` unless `JOBDIR`), `df` (dupefilter), `stats`. (See *Scheduler queues*.)
 - **Downloader** (`engine.downloader`) — `active: set[Request]` (in-flight); `slots: dict[domain, Slot]`; `total_concurrency`/`domain_concurrency`/`ip_concurrency`/`randomize_delay`; `middleware`; `handlers` (`handlers._schemes`). **Slot**: `concurrency`, `delay`, `randomize_delay`, `active`, `queue`, `transferring`, `lastseen`; `free_transfer_slots()`, `download_delay()`.
 - **Scraper** (`engine.scraper`) — `slot` (`None` until spider open): `queue`, `active`, `active_size` (bytes), `itemproc_size`, `max_active_size`, `needs_backout()`; `concurrent_items`.
 - **Spider** (`crawler.spider`) — `name`, `start_urls`, `custom_settings`, `settings`, `logger`.
@@ -47,7 +47,7 @@ wrapping an **inner FIFO/LIFO queue class**:
 - Start requests have their own queues (`SCHEDULER_START_MEMORY_QUEUE`/`_DISK_QUEUE`); within a priority they're served after regular requests.
 
 Read the live classes rather than assume a default:
-- `s = crawler.engine._slot.scheduler`; `s.pqclass.__name__`, `s.mqclass.__name__`, `s.dqclass.__name__`.
+- `s = crawler.engine.scheduler`; `s.pqclass.__name__`, `s.mqclass.__name__`, `s.dqclass.__name__`.
 - `len(s)`, `len(s.mqs)`, `len(s.dqs) if s.dqs else 0`; `s.dqs is not None` (disk/JOBDIR active).
 - Per-priority: iterate `s.mqs.queues` (and `._start_queues`), `s.mqs.curprio`.
 - Per-slot (when `DownloaderAwarePriorityQueue`): iterate `s.mqs.pqueues` → each value is a `ScrapyPriorityQueue`.
@@ -67,9 +67,10 @@ Scrapy tracks live instances of `Request`, `Response`, `Selector`, `Item`, `Spid
 runs. All read-only:
 ```python
 from scrapy.utils.trackref import print_live_refs, get_oldest, iter_all
-print_live_refs()            # live count per class + age of the oldest
-get_oldest("HtmlResponse")   # the oldest live instance (inspect .url, .meta, …)
-list(iter_all("Request"))    # every live instance of a class (by class name)
+
+print_live_refs()  # live count per class + age of the oldest
+get_oldest("HtmlResponse")  # the oldest live instance (inspect .url, .meta, …)
+iter_all("Request")  # iterator with every live instance of a class (by class name)
 ```
 Only `object_ref` subclasses are tracked (the classes above). Steadily growing counts —
 especially `Response` — usually mean references held too long (a response pinned in
@@ -135,6 +136,8 @@ Detect it: `ZYTE_API_KEY` / `ZYTE_API_TRANSPARENT_MODE` in settings,
 - *Per attempt (incl. the client's internal retries):* `attempts`, `errors`, `429`, `error_types/<type>`, `exception_types/<class>`, `status_codes/<code>`, and the ratios `error_ratio` (= errors/attempts), `throttle_ratio` (= 429/attempts). These count every try — including transient errors/429s that were retried and then **succeeded** — so a high `error_ratio`/`429` does *not* mean failures.
 - *Final outcome (after retries):* `success`, `fatal_errors` (the real failure count), `processed` (= success + fatal_errors), `success_ratio` (= success/processed). Genuine give-up failures show in `fatal_errors` and `error_types/*`.
 - So pair them. A request throttled twice then OK ⇒ `attempts=3, 429=2, errors=2, fatal_errors=0, success=1` ⇒ `error_ratio≈0.67` yet `success_ratio=1.0`. (`mean_response_seconds`/`mean_connection_seconds` are timings; `request_args/<arg>` counts how many requests used each param.)
+
+This is verified against scrapy-zyte-api 0.36.0, higher or lower versions can have slightly different settings, stats, or behavior.
 
 ## Further reading (Markdown docs)
 Pull these only if you need more depth on a topic (llms.txt `.md` renders). For the

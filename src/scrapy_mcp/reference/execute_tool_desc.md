@@ -6,9 +6,8 @@ every execute call on this job** (for non-serializable refs like a held response
 namespace your own keys if you need isolation. Reach the engine/stats/settings via
 `crawler.engine`, `crawler.stats`, `crawler.settings`.
 
-Top-level `await` works. To fetch a URL use `await crawler.engine.download_async(request)`
-(`download` is deprecated). Output is whatever you `print(...)`; for machine-readable
-output do `print(json.dumps(...))`.
+Top-level `await` works. To fetch a URL use `await crawler.engine.download_async(request)`.
+Output is whatever you `print(...)`; for machine-readable output do `print(json.dumps(...))`.
 
 The code runs on the crawl's event loop: synchronous code pauses the crawl until it
 returns (like any sync work on the loop), while `await` yields control back, so
@@ -17,9 +16,10 @@ serialized — while one call is parked on an `await` (e.g. a long observation),
 execute calls and the crawl keep running. Avoid sync-blocking calls (`time.sleep`, heavy
 CPU, blocking I/O) — they freeze the crawl and cannot be interrupted.
 
-Each call has a timeout: omit `timeout_sec` (or pass ≤ 0) for the default (30s); pass a larger
-value for long observation loops, up to the server max (600s by default — both configurable).
-The timeout fires only at an `await` point, so it can't interrupt sync-blocking code.
+Each call has a timeout: omit `timeout_sec` for the Scrapy side default (30s); pass a
+larger value for long observation loops, up to the server max (600s by default — both
+configurable at the Scrapy side). The timeout fires only at an `await` point, so it
+can't interrupt sync-blocking code.
 
 Default to read-only inspection. For how the live crawl is wired and what is safe to
 read, call the **`inspection_reference`** MCP tool — a separate tool, not a function

@@ -154,9 +154,7 @@ async def execute(job_id: str, code: str, timeout_sec: float | None = None) -> s
 
 @app.tool(structured_output=False)
 def inspection_reference() -> str:
-    """Reference for inspecting a live crawl: how it's wired and what's safe to read
-    (object map, component attributes, scheduler queues, exporters, memory/trackref,
-    read-only traps, scrapy-zyte-api, version notes)."""
+    """Reference for inspecting a live crawl: how it's wired and what's safe to read."""
     return INSPECTION_REFERENCE
 
 

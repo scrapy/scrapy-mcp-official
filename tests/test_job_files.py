@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from scrapy_mcp.job_files import (
-    _SUPPORTED_JOB_FILE_VERSION,
+    SUPPORTED_JOB_FILE_VERSION,
     JobFile,
     JobNotFound,
     JobRegistry,
@@ -78,7 +78,7 @@ def test_jobfile_read_non_dict(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "version",
     [
-        _SUPPORTED_JOB_FILE_VERSION + 1,
+        SUPPORTED_JOB_FILE_VERSION + 1,
         None,
         "1",
         1.0,
@@ -93,13 +93,13 @@ def test_other_versions_are_refused(tmp_path: Path, version: object) -> None:
 
 
 def test_get_refuses_an_unsupported_version(registry: JobRegistry) -> None:
-    _write_raw(registry.directory, "future", version=_SUPPORTED_JOB_FILE_VERSION + 1)
+    _write_raw(registry.directory, "future", version=SUPPORTED_JOB_FILE_VERSION + 1)
     with pytest.raises(UnsupportedJobFile):
         registry.get("future")
 
 
 def test_unsupported_versions_are_still_listed(registry: JobRegistry) -> None:
-    _write_raw(registry.directory, "future", version=_SUPPORTED_JOB_FILE_VERSION + 1)
+    _write_raw(registry.directory, "future", version=SUPPORTED_JOB_FILE_VERSION + 1)
     assert [j.job_id for j in registry.list_jobs()] == ["future"]
 
 

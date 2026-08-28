@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "scrapy-mcp-official"
 version = "0.1.0"
-description = "An MCP server that attaches an agent to a live Scrapy crawl and runs Python inside it"
+description = "An MCP server that attaches an agent to a live Scrapy crawl and runs code inside it"
 authors = [{ name = "Scrapy developers", email = "opensource@zyte.com" }]
 maintainers = [{ name = "Scrapy developers", email = "opensource@zyte.com" }]
 readme = "README.md"
@@ -102,6 +102,9 @@ strict = true
 addopts = ["--import-mode=importlib"]
 asyncio_mode = "auto"
 strict = true
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
 extend-select = [

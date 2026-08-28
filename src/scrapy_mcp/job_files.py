@@ -10,7 +10,7 @@ from platformdirs import user_state_dir
 
 #: The one on-disk format this server knows how to read, mirroring Scrapy's
 #: ``scrapy.utils._remote_control.JOB_FILE_VERSION``.
-_SUPPORTED_JOB_FILE_VERSION = 1
+SUPPORTED_JOB_FILE_VERSION = 1
 
 
 # match the default path in scrapy.utils._remote_control.job_files_dir()
@@ -54,7 +54,7 @@ class JobInfo:
         """Whether this file can be read by this server."""
         # bool is a subclass of int, so we need to check for it explicitly
         if isinstance(self.version, int) and not isinstance(self.version, bool):
-            return self.version == _SUPPORTED_JOB_FILE_VERSION
+            return self.version == SUPPORTED_JOB_FILE_VERSION
         return False
 
     @classmethod
