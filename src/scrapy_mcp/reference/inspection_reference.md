@@ -2,7 +2,7 @@
 
 Background for navigating and debugging a *running* crawl via `execute`. It describes how
 the crawl is wired and what's safe to read — draw your own conclusions about any specific
-symptom from the live state. Verified against Scrapy 2.16; if the crawl runs a different
+symptom from the live state. Verified against Scrapy 2.19; if the crawl runs a different
 version, read the live objects (the structure is stable, details may shift).
 
 Conceptual data-flow (engine, scheduler, downloader, spiders, item pipeline,
@@ -16,9 +16,9 @@ by settings and add-ons; read what's actually enabled rather than assuming a sto
 ```
 crawler
 ├── settings · signals · stats · addons · request_fingerprinter
-├── spider                      (None until the crawl runs)
+├── spider
 ├── extensions → .middlewares
-└── engine                      (None until the crawl runs)
+└── engine
     ├── running · paused · start_time · spider · pause()/unpause()
     ├── scheduler
     ├── downloader → active · slots · *_concurrency · middleware.middlewares · handlers
@@ -31,7 +31,7 @@ crawler
 - **Downloader** (`engine.downloader`) — `active: set[Request]` (in-flight); `slots: dict[domain, Slot]`; `total_concurrency`/`domain_concurrency`/`ip_concurrency`/`randomize_delay`; `middleware`; `handlers` (`handlers._schemes`). **Slot**: `concurrency`, `delay`, `randomize_delay`, `active`, `queue`, `transferring`, `lastseen`; `free_transfer_slots()`, `download_delay()`.
 - **Scraper** (`engine.scraper`) — `slot` (`None` until spider open): `queue`, `active`, `active_size` (bytes), `itemproc_size`, `max_active_size`, `needs_backout()`; `concurrent_items`.
 - **Spider** (`crawler.spider`) — `name`, `start_urls`, `custom_settings`, `settings`, `logger`.
-- **Stats** (`crawler.stats`) — `get_stats()`, `get_value(k)`. Common keys: `item_scraped_count`, `downloader/request_count`, `downloader/response_status_count/<code>`, `response_received_count`, `scheduler/enqueued{,/disk,/memory}`, `scheduler/dequeued`, `retry/count`, `downloader/exception_count`, `log_count/ERROR`.
+- **Stats** (`crawler.stats`) — `get_stats()`, `get_value(k)`. Common keys: `item_scraped_count`, `downloader/request_count`, `downloader/response_status_count/<code>`, `response_received_count`, `scheduler/enqueued{,/disk,/memory}`, `scheduler/dequeued`, `retry/count`, `downloader/exception_count`, `spider_exceptions/count`, `log_count/ERROR`.
 - **Enabled components** (ordered tuples of *instances*): `engine.downloader.middleware.middlewares`, `engine.scraper.spidermw.middlewares`, `engine.scraper.itemproc.middlewares`, `crawler.extensions.middlewares`. To fetch *one* by class: `crawler.get_downloader_middleware(Cls)` / `get_spider_middleware` / `get_item_pipeline` / `get_extension` / `get_addon` → instance or `None`.
 - **One-shot snapshot** — `from scrapy.utils.engine import print_engine_status; print_engine_status(crawler.engine)`.
 
@@ -42,7 +42,7 @@ wrapping an **inner FIFO/LIFO queue class**:
 
 - Outer (`pqclass`, from `SCHEDULER_PRIORITY_QUEUE`):
   - `ScrapyPriorityQueue` — per-priority sub-queues; dequeues lowest internal priority first (`internal = -request.priority`).
-  - `DownloaderAwarePriorityQueue` — **the default since Scrapy 2.14** — round-robins across downloader slots so one domain doesn't starve others. (Incompatible with `CONCURRENT_REQUESTS_PER_IP != 0`.)
+  - `DownloaderAwarePriorityQueue` (the default one) — round-robins across downloader slots so one domain doesn't starve others.
 - Inner memory (`mqclass`, `SCHEDULER_MEMORY_QUEUE`) and disk (`dqclass`, `SCHEDULER_DISK_QUEUE`): `LifoMemoryQueue`/`FifoMemoryQueue`, `PickleLifoDiskQueue`/`PickleFifoDiskQueue`/`Marshal*DiskQueue` (from `scrapy.squeues`). LIFO ≈ depth-first; FIFO (with `DEPTH_PRIORITY=1`) ≈ breadth-first. Disk queues (de)serialize requests via `request.to_dict()`.
 - Start requests have their own queues (`SCHEDULER_START_MEMORY_QUEUE`/`_DISK_QUEUE`); within a priority they're served after regular requests.
 
@@ -58,7 +58,7 @@ Feeds are produced by the **`FeedExporter` extension** → `fe = crawler.get_ext
 - `fe.slots: list[FeedSlot]` — active export streams. Per slot: `uri`, `uri_template`, `format`, `batch_id`, `itemcount` (items written so far), `storage`, `feed_options`.
 - `fe.exporters` / `fe.storages` — registered format→exporter and scheme→storage classes.
 - Formats (`FEED_EXPORTERS_BASE`): `json`, `jsonlines`/`jsonl`/`jl`, `csv`, `xml`, `pickle`, `marshal` → classes in `scrapy.exporters`.
-- Storages (`FEED_STORAGES_BASE`): `""`/`file`, `ftp`, `s3`, `gs`, `stdout`.
+- Storages (`FEED_STORAGES_BASE`): `""`/`file`, `ftp`, `ftps`, `s3`, `gs`, `stdout`.
 - Stats: `feedexport/success_count/<Storage>`, `feedexport/failed_count/<Storage>`.
 
 ## Memory & live object counts (`trackref`)
@@ -72,16 +72,17 @@ print_live_refs()  # live count per class + age of the oldest
 get_oldest("HtmlResponse")  # the oldest live instance (inspect .url, .meta, …)
 iter_all("Request")  # iterator with every live instance of a class (by class name)
 ```
-Only `object_ref` subclasses are tracked (the classes above). Steadily growing counts —
-especially `Response` — usually mean references held too long (a response pinned in
-`request.meta`/`cb_kwargs`/a callback closure). For full-heap analysis, Pympler's
-`muppy` if it's installed.
+Only `object_ref` subclasses are tracked (the classes above). `live_refs` is a
+`WeakKeyDictionary`: indexing it with a class that has no live instances raises
+`KeyError`. Steadily growing counts — especially `Response` — usually mean references
+held too long (a response pinned in `request.meta`/`cb_kwargs`/a callback closure).
+For full-heap analysis, use Pympler's `muppy` if it's installed.
 
 ## How it behaves (so you don't assume wrong)
 - One event loop: synchronous/CPU work in a callback, middleware, pipeline — or in your `execute` — blocks the whole crawl; `await` yields it back.
-- Concurrency is enforced per domain/IP via `downloader.slots`, each with its own `delay`. With AutoThrottle on, `slot.delay` is set live: target = `download_latency / AUTOTHROTTLE_TARGET_CONCURRENCY` (default `1.0`), the new delay = average of current and target, clamped to `[DOWNLOAD_DELAY, AUTOTHROTTLE_MAX_DELAY]`, and non-200 responses can only raise it. Per-response latency (connect→headers) is in `response.meta['download_latency']`; `AUTOTHROTTLE_DEBUG=True` logs each adjustment.
+- Concurrency is enforced per domain/IP via `downloader.slots`, each with its own `delay`; `total_concurrency` caps overall in-flight requests. With AutoThrottle on, `slot.delay` is set live: target = `download_latency / AUTOTHROTTLE_TARGET_CONCURRENCY` (default `1.0`), the new delay = average of current and target, clamped to `[DOWNLOAD_DELAY, AUTOTHROTTLE_MAX_DELAY]`, and non-200 responses can only raise it. `downloader._delay` is the default delay of *new* slots. Per-response latency (connect→headers) is in `response.meta['download_latency']`; `AUTOTHROTTLE_DEBUG=True` logs each adjustment.
 - Backpressure: when the scraper slot is full (`active_size ≥ max_active_size` / `needs_backout()`), the engine stops pulling responses and the downloader idles.
-- The dupefilter dedups by request fingerprint. `engine`/`spider`/`extensions` are `None` before the crawl starts.
+- The dupefilter dedups by request fingerprint.
 - Components are swappable by settings/add-ons — the scheduler queue class, download handlers, middlewares, and the download path itself may not be the stock ones.
 
 ## Read-only discipline
@@ -106,8 +107,7 @@ attempt it, two non-obvious hazards — described here so they're recognizable, 
   queue (`dqs`, i.e. `JOBDIR` set) is serialized via `request.to_dict()` with the callback stored
   *by name*, then re-resolved with `getattr(spider, name)` on dequeue (`request_from_dict`) — so
   it *does* pick up a reassigned method. In-flight requests and anything already handed to the
-  scraper hold their bound method regardless. (Verified against 2.16.)
-
+  scraper hold their bound method regardless.
 - **A code object compiled from a string breaks `inspect.getsource()`, which Scrapy calls on
   every generator callback.** Swapping a function's `__code__` for one compiled inside `execute`
   (`co_filename='<execute>'`, absent from `linecache`) makes `inspect.getsource()` raise
@@ -147,5 +147,6 @@ versioned separately (its own `0.x` line, not Scrapy's).
 - Scheduler — https://docs.scrapy.org/en/latest/topics/scheduler.md
 - AutoThrottle — https://docs.scrapy.org/en/latest/topics/autothrottle.md
 - Memory leaks / `trackref` — https://docs.scrapy.org/en/latest/topics/leaks.md
+- Built-in stats reference — https://docs.scrapy.org/en/latest/topics/stats.md
 - Optimization — https://docs.scrapy.org/en/latest/topics/optimize.md
 - scrapy-zyte-api — https://scrapy-zyte-api.readthedocs.io/en/latest/llms.txt
