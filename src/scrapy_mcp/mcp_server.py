@@ -77,7 +77,10 @@ def _job(job_id: str) -> JobInfo:
         raise ValueError(str(e))
 
 
-@app.tool(structured_output=False)
+@app.tool(
+    description="List attachable live Scrapy crawls and check each one's health.",
+    structured_output=False,
+)
 async def list_jobs() -> str:
     """List attachable live Scrapy crawls (job_id, spider, project, pid) and
     check each one's health by asking its ``/status`` endpoint. Jobs that fail
@@ -97,7 +100,10 @@ async def list_jobs() -> str:
     return "Attachable jobs:\n" + "\n".join(lines)
 
 
-@app.tool(structured_output=False)
+@app.tool(
+    description="Check that a crawl is alive and responsive, and report information about it.",
+    structured_output=False,
+)
 async def status(job_id: str) -> str:
     """Check that a crawl is alive and responsive, and report what it is
     running (spider, project, Scrapy version, pid, uptime).
