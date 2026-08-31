@@ -1,0 +1,70 @@
+requires = [
+    "tox>=4.25",
+    "tox-uv",
+]
+env_list = [
+    "min",
+    "py",
+    "mypy",
+    "pre-commit",
+    "twinecheck",
+]
+
+[env_run_base]
+dependency_groups = ["tests"]
+commands = [
+    [
+        "pytest",
+        { replace = "posargs", default = [
+            "--cov=scrapy_mcp",
+            "--cov-report=term-missing",
+            "--cov-report=xml",
+            "--junitxml={env_name}.junit.xml",
+            "-o",
+            "junit_family=legacy",
+            "tests",
+        ], extend = true },
+    ],
+]
+
+[env.min]
+basepython = ["python3.10"]
+deps = [
+    "aiohttp==3.9.0",
+    "mcp==2.0.1",
+    "platformdirs==2.0.0",
+    "psutil==6.0.0",
+]
+
+[env.pre-commit]
+dependency_groups = []
+deps = [
+    "pre-commit",
+]
+commands = [
+    ["pre-commit", "run", { replace = "posargs", default = ["--all-files"], extend = true }],
+]
+
+[env.mypy]
+basepython = "python3.10"
+dependency_groups = []
+deps = [
+    "mypy==2.3.1",
+    "aiohttp==3.14.3",
+    "pytest==9.1.1",
+    "types-psutil==7.2.2.20260827",
+]
+commands = [
+    ["mypy", { replace = "posargs", default = ["src", "tests"], extend = true }],
+]
+
+[env.twinecheck]
+dependency_groups = []
+deps = [
+    "twine==7.0.0",
+    "build==1.5.0",
+]
+commands = [
+    ["python", "-m", "build", "--sdist"],
+    ["twine", "check", "dist/*"],
+]

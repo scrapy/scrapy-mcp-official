@@ -1,0 +1,63 @@
+name: Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+
+env:
+  FORCE_COLOR: 1
+
+concurrency:
+  group: ${{github.workflow}}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        toxenv: [py]
+        include:
+        - python-version: "3.10"
+          os: ubuntu-latest
+          toxenv: min
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      with:
+        python-version: ${{ matrix.python-version }}
+        allow-prereleases: true
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      with:
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.toml
+
+    - name: Run tests
+      env:
+        TOXENV: ${{ matrix.toxenv }}
+      run: uvx --with tox-uv tox
+
+    - name: Upload coverage report
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+
+    - name: Upload test results
+      if: ${{ !cancelled() }}
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+      with:
+        report_type: test_results
