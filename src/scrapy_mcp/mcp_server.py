@@ -74,7 +74,7 @@ def _job(job_id: str) -> JobInfo:
     try:
         return JobRegistry().get(job_id)
     except JobError as e:
-        raise ValueError(str(e))
+        raise ValueError(str(e)) from e
 
 
 @app.tool(
@@ -95,7 +95,7 @@ async def list_jobs() -> str:
     lines = [
         f"- {j.job_id}  spider={j.spider} project={j.project} "
         f"pid={j.pid} Scrapy={j.scrapy_version}  [{h}]"
-        for j, h in zip(jobs, healths)
+        for j, h in zip(jobs, healths, strict=True)
     ]
     return "Attachable jobs:\n" + "\n".join(lines)
 
@@ -114,7 +114,7 @@ async def status(job_id: str) -> str:
     try:
         data = await _status_of(job)
     except RequestError as e:
-        raise ValueError(f"{job_id}: {e}")
+        raise ValueError(f"{job_id}: {e}") from e
     lines = [f"job {job_id}"]
     for label, key in (
         ("spider", "spider"),
@@ -139,7 +139,7 @@ async def execute(job_id: str, code: str, timeout_sec: float | None = None) -> s
     try:
         env = await _client(job).execute(code, requested)
     except RequestError as e:
-        raise ValueError(f"{job_id}: {e}")
+        raise ValueError(f"{job_id}: {e}") from e
 
     if env.get("status") == "compile_error":
         raise ValueError("compile_error:\n" + (env.get("traceback") or ""))
