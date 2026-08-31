@@ -1,5 +1,10 @@
 # Scrapy MCP Server
 
+[![PyPI version](https://img.shields.io/pypi/v/scrapy-mcp-official.svg)](https://pypi.org/project/scrapy-mcp-official/)
+[![Python versions](https://img.shields.io/pypi/pyversions/scrapy-mcp-official.svg)](https://pypi.org/project/scrapy-mcp-official/)
+[![Tests](https://github.com/scrapy/scrapy-mcp-official/actions/workflows/tests.yml/badge.svg)](https://github.com/scrapy/scrapy-mcp-official/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/gh/scrapy/scrapy-mcp-official/branch/main/graph/badge.svg)](https://codecov.io/gh/scrapy/scrapy-mcp-official)
+
 This is an MCP server that can connect to live Scrapy crawls to inspect and
 control them.
 
@@ -65,16 +70,12 @@ without managing a virtual environment for it, as shown below.
 
 ## Setup
 
-You'll need [uv](https://docs.astral.sh/uv/). Clone the repo:
+You'll need [uv](https://docs.astral.sh/uv/).
+
+Register the MCP server with your agent (e.g. **Claude Code**) — once:
 
 ```bash
-git clone https://github.com/scrapy/scrapy-mcp-official && cd scrapy-mcp-official
-```
-
-Then register the MCP server with your agent (e.g. **Claude Code**) — once:
-
-```bash
-claude mcp add --scope user scrapy-mcp -- uvx --from /absolute/path/to/scrapy-mcp-official scrapy-mcp
+claude mcp add --scope user scrapy-mcp -- uvx --from scrapy-mcp-official scrapy-mcp
 ```
 
 Or put it in a project `.mcp.json`:
@@ -84,7 +85,7 @@ Or put it in a project `.mcp.json`:
   "mcpServers": {
     "scrapy-mcp": {
       "command": "uvx",
-      "args": ["--from", "/absolute/path/to/scrapy-mcp-official", "scrapy-mcp"]
+      "args": ["--from", "scrapy-mcp-official", "scrapy-mcp"]
     }
   }
 }
