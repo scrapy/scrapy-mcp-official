@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scrapy-mcp-official"
-version = "0.1.0"
+version = "0.1.1"
 description = "An MCP server that attaches an agent to a live Scrapy crawl and runs code inside it"
 authors = [{ name = "Scrapy developers", email = "opensource@zyte.com" }]
 maintainers = [{ name = "Scrapy developers", email = "opensource@zyte.com" }]
