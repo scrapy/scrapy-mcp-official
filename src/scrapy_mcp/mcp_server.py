@@ -14,12 +14,19 @@ import time
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
+from mcp.types import ToolAnnotations
 
 from .client import CrawlClient, RequestError
 from .job_files import JobError, JobInfo, JobRegistry
 from .reference import EXECUTE_TOOL_DESC, INSPECTION_REFERENCE
 
 app = MCPServer("scrapy-mcp")
+
+# Hints for the client, not a permission check. The read-only tools only talk to a
+# job of ours on localhost, so their world is closed. `destructive_hint` and
+# `idempotent_hint` stay unset: the spec calls them meaningful only when
+# `read_only_hint` is false, and `execute` wants their defaults.
+READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 
 
 def _client(job: JobInfo) -> CrawlClient:
@@ -79,6 +86,7 @@ def _job(job_id: str) -> JobInfo:
 
 @app.tool(
     description="List attachable live Scrapy crawls and check each one's health.",
+    annotations=READ_ONLY,
     structured_output=False,
 )
 async def list_jobs() -> str:
@@ -102,6 +110,7 @@ async def list_jobs() -> str:
 
 @app.tool(
     description="Check that a crawl is alive and responsive, and report information about it.",
+    annotations=READ_ONLY,
     structured_output=False,
 )
 async def status(job_id: str) -> str:
@@ -130,7 +139,11 @@ async def status(job_id: str) -> str:
     return "\n".join(lines)
 
 
-@app.tool(description=EXECUTE_TOOL_DESC, structured_output=False)
+@app.tool(
+    description=EXECUTE_TOOL_DESC,
+    annotations=ToolAnnotations(open_world_hint=True),
+    structured_output=False,
+)
 async def execute(job_id: str, code: str, timeout_sec: float | None = None) -> str:
     """Send code to execute, return formatted result."""
     # timeout_sec unset or <= 0 means the in-job default applies.
@@ -158,7 +171,7 @@ async def execute(job_id: str, code: str, timeout_sec: float | None = None) -> s
     return "\n".join(parts)
 
 
-@app.tool(structured_output=False)
+@app.tool(annotations=READ_ONLY, structured_output=False)
 def inspection_reference() -> str:
     """Reference for inspecting a live crawl: how it's wired and what's safe to read."""
     return INSPECTION_REFERENCE

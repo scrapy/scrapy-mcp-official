@@ -375,6 +375,26 @@ def test_inspection_reference() -> None:
     assert mcp_server.inspection_reference() == INSPECTION_REFERENCE
 
 
+@pytest.mark.parametrize(
+    ("tool_name", "read_only", "open_world"),
+    [
+        ("list_jobs", True, False),
+        ("status", True, False),
+        ("inspection_reference", True, False),
+        # execute leaves read_only_hint unset, so the destructive default applies
+        ("execute", None, True),
+    ],
+)
+async def test_tool_annotations(
+    tool_name: str, read_only: bool | None, open_world: bool
+) -> None:
+    tools = {t.name: t for t in await mcp_server.app.list_tools()}
+    hints = tools[tool_name].annotations
+    assert hints is not None
+    assert hints.read_only_hint is read_only
+    assert hints.open_world_hint is open_world
+
+
 def test_main_runs_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[bool] = []
     monkeypatch.setattr(mcp_server.app, "run", lambda: calls.append(True))
