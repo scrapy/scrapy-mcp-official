@@ -54,6 +54,9 @@ class FakeCrawl:
         # event loop is wedged, without making teardown wait out a real sleep
         self.status_hangs = False
         self._released = asyncio.Event()
+        # when set, /execute answers with this response verbatim, to model a
+        # port that was reused by something other than a RemoteControl server
+        self.execute_response: web.Response | None = None
         # every /execute body received, so tests can assert on the wire payload
         self.requests: list[dict[str, Any]] = []
         self.port: int | None = None
@@ -103,6 +106,8 @@ class FakeCrawl:
             return web.json_response({"error": "unauthorized"}, status=401)
         body = await request.json()
         self.requests.append(body)
+        if self.execute_response is not None:
+            return self.execute_response
         return web.json_response(self.envelopes.get(body["code"], self.default))
 
 
@@ -194,7 +199,7 @@ async def test_list_jobs_reports_a_rejected_token(
     assert crawl.port is not None
     write_job_file(tmp_path, "job-1", port=crawl.port, token="wrong")
     out = await mcp_server.list_jobs()
-    assert "Request authentication error" in out
+    assert "Token rejected" in out
 
 
 async def test_list_jobs_reports_an_unresponsive_job(
@@ -218,6 +223,14 @@ async def test_list_jobs_reports_a_non_json_response(crawl: FakeCrawl) -> None:
     crawl.status_response = web.Response(text="not json")
     out = await mcp_server.list_jobs()
     assert "Request error" in out
+
+
+async def test_list_jobs_reports_malformed_json(crawl: FakeCrawl) -> None:
+    crawl.status_response = web.Response(
+        text="{not json", content_type="application/json"
+    )
+    out = await mcp_server.list_jobs()
+    assert "malformed JSON" in out
 
 
 async def test_list_jobs_reports_a_missing_token(
@@ -283,6 +296,14 @@ async def test_status_on_a_stale_job_file_raises(crawl: FakeCrawl) -> None:
     await crawl.stop()
     with pytest.raises(ValueError, match="Connection error"):
         await mcp_server.status("job-1")
+
+
+async def test_status_refuses_a_dead_pid(crawl: FakeCrawl, tmp_path: Path) -> None:
+    assert crawl.port is not None
+    write_job_file(tmp_path, "job-1", port=crawl.port, pid=999999)
+    with pytest.raises(ValueError, match=r"pid 999999.*not running"):
+        await mcp_server.status("job-1")
+    assert crawl.status_calls == 0
 
 
 async def test_list_jobs_reports_an_unsupported_version(
@@ -368,6 +389,50 @@ async def test_execute_omits_an_unset_timeout(crawl: FakeCrawl) -> None:
 async def test_execute_on_a_stale_job_file_raises(crawl: FakeCrawl) -> None:
     await crawl.stop()
     with pytest.raises(ValueError, match="Connection error"):
+        await mcp_server.execute("job-1", "print(1)")
+
+
+async def test_execute_refuses_a_dead_pid(crawl: FakeCrawl, tmp_path: Path) -> None:
+    assert crawl.port is not None
+    write_job_file(tmp_path, "job-1", port=crawl.port, pid=999999)
+    with pytest.raises(ValueError, match=r"pid 999999.*not running"):
+        await mcp_server.execute("job-1", "print(1)")
+    assert crawl.requests == []
+
+
+async def test_execute_reports_a_rejected_token(
+    crawl: FakeCrawl, tmp_path: Path
+) -> None:
+    assert crawl.port is not None
+    write_job_file(tmp_path, "job-1", port=crawl.port, token="wrong")
+    with pytest.raises(ValueError, match="Token rejected"):
+        await mcp_server.execute("job-1", "print(1)")
+    assert crawl.requests == []
+
+
+async def test_execute_rejects_a_non_envelope(crawl: FakeCrawl) -> None:
+    crawl.envelopes["print(1)"] = {"ok": True}
+    with pytest.raises(ValueError, match="not a Scrapy crawl"):
+        await mcp_server.execute("job-1", "print(1)")
+
+
+async def test_execute_rejects_an_unknown_status(crawl: FakeCrawl) -> None:
+    crawl.envelopes["print(1)"] = {"status": "running", "elapsed_sec": 0.0}
+    with pytest.raises(ValueError, match="not a Scrapy crawl"):
+        await mcp_server.execute("job-1", "print(1)")
+
+
+async def test_execute_rejects_a_non_dict_body(crawl: FakeCrawl) -> None:
+    crawl.execute_response = web.json_response([1, 2, 3])
+    with pytest.raises(ValueError, match=r"Unexpected response body: \[1, 2, 3\]"):
+        await mcp_server.execute("job-1", "print(1)")
+
+
+async def test_execute_rejects_malformed_json(crawl: FakeCrawl) -> None:
+    crawl.execute_response = web.Response(
+        text="{not json", content_type="application/json"
+    )
+    with pytest.raises(ValueError, match="malformed JSON"):
         await mcp_server.execute("job-1", "print(1)")
 
 

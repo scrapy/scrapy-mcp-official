@@ -30,6 +30,15 @@ class UnsupportedJobFile(JobError):
     """The file version is unsupported."""
 
 
+class StaleJobFile(JobError):
+    """The crawl that created the file no longer exists."""
+
+
+def _process_alive(pid: int | None) -> bool:
+    """Whether a process with the given pid exists."""
+    return pid is not None and psutil.pid_exists(pid)
+
+
 # match what is written by scrapy.utils._remote_control.write_job_file()
 @dataclass(frozen=True)
 class JobInfo:
@@ -110,7 +119,7 @@ class JobRegistry:
             info = JobFile(path).read()
             if info is None:
                 continue
-            if info.pid is None or not psutil.pid_exists(info.pid):
+            if not _process_alive(info.pid):
                 continue
             out.append(info)
         return out
@@ -118,8 +127,10 @@ class JobRegistry:
     def get(self, job_id: str) -> JobInfo:
         """One usable job by id, or raise a ``JobError`` saying why not."""
         info = JobFile(self.directory / f"{job_id}.json").read()
-        if info is None or info.port is None or info.token is None:
+        if info is None or info.port is None or info.token is None or info.pid is None:
             raise JobNotFound(f"no such job: {job_id}")
         if not info.supported:
             raise UnsupportedJobFile(f"{job_id}: unsupported job file format")
+        if not _process_alive(info.pid):
+            raise StaleJobFile(f"{job_id}: its process (pid {info.pid}) is not running")
         return info
