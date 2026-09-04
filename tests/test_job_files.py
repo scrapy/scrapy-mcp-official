@@ -11,6 +11,7 @@ from scrapy_mcp.job_files import (
     JobFile,
     JobNotFound,
     JobRegistry,
+    StaleJobFile,
     UnsupportedJobFile,
     default_jobs_dir,
 )
@@ -129,10 +130,27 @@ def test_get_missing(registry: JobRegistry) -> None:
         registry.get("nope")
 
 
-def test_get_incomplete(registry: JobRegistry) -> None:
-    _write_raw(registry.directory, "incomplete", token=None)
+@pytest.mark.parametrize("missing", ["port", "token", "pid"])
+def test_get_incomplete(registry: JobRegistry, missing: str) -> None:
+    _write_raw(registry.directory, "incomplete", **{missing: None})
     with pytest.raises(JobNotFound):
         registry.get("incomplete")
+
+
+def test_get_refuses_a_dead_pid(registry: JobRegistry) -> None:
+    _write_raw(registry.directory, "dead", pid=999999)
+    with pytest.raises(StaleJobFile, match=r"pid 999999.*not running"):
+        registry.get("dead")
+
+
+def test_get_reports_an_unsupported_version_before_a_dead_pid(
+    registry: JobRegistry,
+) -> None:
+    _write_raw(
+        registry.directory, "future", version=SUPPORTED_JOB_FILE_VERSION + 1, pid=999999
+    )
+    with pytest.raises(UnsupportedJobFile):
+        registry.get("future")
 
 
 def test_list_empty_when_no_dir(registry: JobRegistry) -> None:
