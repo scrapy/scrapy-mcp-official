@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, cast
+from typing import Any
 
 import aiohttp
 
@@ -11,6 +11,8 @@ EXECUTE_TIMEOUT_DEFAULT = 600.0
 EXECUTE_DEADLINE_MARGIN = 30.0
 # used for the /status request timeout
 STATUS_TIMEOUT = 3.0
+# possible `status` values in the /execute result
+EXECUTE_STATUSES = frozenset({"ok", "compile_error", "error", "timeout"})
 
 
 def _get_execute_deadline(timeout_sec: float | None) -> float:
@@ -44,7 +46,13 @@ class CrawlClient:
         if timeout_sec is not None:
             payload["timeout_sec"] = timeout_sec
         deadline = _get_execute_deadline(timeout_sec)
-        return await self._request("POST", "/execute", timeout=deadline, json=payload)
+        result = await self._request("POST", "/execute", timeout=deadline, json=payload)
+        if result.get("status") not in EXECUTE_STATUSES:
+            raise RequestError(
+                f"Unexpected response from {self._base_url}, not a Scrapy crawl?:"
+                f" {str(result)[:200]}"
+            )
+        return result
 
     async def _request(
         self,
@@ -67,13 +75,22 @@ class CrawlClient:
                 ) as resp,
             ):
                 if resp.status == 401:
-                    raise RequestError("Request authentication error")
+                    raise RequestError(
+                        f"Token rejected by {self._base_url} — probably a stale"
+                        " or corrupted job file"
+                    )
                 if resp.status != 200:
                     body = (await resp.text())[:200]
                     raise RequestError(
                         f"Unexpected response status {resp.status}: {body}"
                     )
-                return cast("dict[str, Any]", await resp.json())
+                try:
+                    data = await resp.json()
+                except ValueError as e:
+                    raise RequestError("Unexpected response: malformed JSON") from e
+                if not isinstance(data, dict):
+                    raise RequestError(f"Unexpected response body: {str(data)[:200]}")
+                return data
         except aiohttp.ClientConnectorError as e:
             raise RequestError("Connection error") from e
         except asyncio.TimeoutError as e:

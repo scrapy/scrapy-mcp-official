@@ -2,7 +2,8 @@
 
 Outcome → ``isError`` mapping (MCPServer: return → isError=false, raise → isError=true):
 - envelope ``ok`` / ``error`` / ``timeout`` → return rendered text (the code ran).
-- ``compile_error`` and transport failures → raise (distinct messages).
+- ``compile_error``, transport failures and a response that is not a
+  RemoteControl envelope → raise (distinct messages).
 - an unusable job → raise from :func:`status` and :func:`execute`, but only annotate
   in :func:`list_jobs`, where hiding it would hide the very thing worth looking at.
 """
