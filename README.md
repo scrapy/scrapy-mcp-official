@@ -109,6 +109,17 @@ the agent to list running crawls or to attach to one.
   before inspecting: object graph, common stats names, scheduler queues, and
   risky patterns to avoid.
 
+## Evaluation
+
+The `evals` directory holds [agent-exam](https://github.com/zytedata/agent-exam)
+evals. To run them:
+
+```bash
+uv run agent-exam doctor
+uv run agent-exam run "*"
+uv run agent-exam show latest
+```
+
 ## Security
 
 This MCP server is designed to run arbitrary Python code inside your crawl

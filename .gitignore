@@ -12,3 +12,5 @@ uv.lock
 .coverage
 coverage.*
 *.junit.xml
+evals/runs/
+evals/crawl.log

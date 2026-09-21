@@ -1,0 +1,16 @@
+description: |
+  Telling progress from a stall takes two readings, or in-flight evidence. The
+  fixture crawl never stops, so the right answer is that it is progressing.
+
+prompt: |
+  Is the books crawl running on this machine making progress, or is it stuck?
+  Back your answer with evidence from the crawl itself.
+
+assertions:
+  - mcp_tool_called: execute
+  - judge: >
+      The agent's final answer concludes the crawl is making progress, and the
+      evidence comes from execute tool output: counters that increased between
+      two readings (responses received, items scraped, requests dequeued), or
+      requests currently in flight in the downloader, with the engine running
+      and not paused.

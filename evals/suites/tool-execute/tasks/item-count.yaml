@@ -1,0 +1,16 @@
+description: |
+  The basic stats question. Graded on traceability, since the fixture crawl
+  runs indefinitely and the actual numbers vary from run to run.
+
+prompt: |
+  How many items has the running books spider scraped so far, and how many of
+  its requests got a non-200 response?
+
+assertions:
+  - mcp_tool_called: execute
+  - judge: >
+      The agent's final answer gives an item count and a non-200 response
+      count (zero if the crawl reported none), and both are supported by the
+      output of an execute tool call, e.g. the item_scraped_count and
+      downloader/response_status_count/* stats. A number the tool output does
+      not support fails.

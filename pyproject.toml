@@ -53,11 +53,17 @@ tests = [
 ]
 dev = [
     { include-group = "tests" },
+    # Pinned to a main commit until MCP support is released.
+    "agent-exam @ git+https://github.com/zytedata/agent-exam.git@c88fec170ff9683dad9d769601206088fdbaeb7d",
     "pre-commit>=4.6.2",
     "ruff>=0.16.4",
+    "scrapy>=2.19.0",
     "tox>=4.25",
     "tox-uv",
 ]
+
+[tool.agent-exam]
+pre_run_hook = "evals.hooks:pre_run_hook"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -220,6 +226,10 @@ ignore = [
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
+"evals/**" = [
+    "RUF012",
+    "S",
+]
 "tests/**" = [
     "S",
 ]

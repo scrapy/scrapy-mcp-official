@@ -1,0 +1,13 @@
+description: |
+  Enabled components are read from the live objects. The fixture spider
+  enables one custom item pipeline, PriceToFloatPipeline.
+
+prompt: |
+  Which item pipelines are enabled in the running books crawl?
+
+assertions:
+  - mcp_tool_called: execute
+  - judge: >
+      The agent's final answer names PriceToFloatPipeline as an enabled item
+      pipeline of the crawl, and lists no pipeline that the tool output does
+      not show as enabled.
