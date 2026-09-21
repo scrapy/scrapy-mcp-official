@@ -1,0 +1,15 @@
+default_harness: claude_code
+
+skills_dirs: []
+
+providers:
+  claude_code:
+    default_model: claude-sonnet-5
+    judge_model: claude-haiku-4-5
+    permission_mode: auto
+
+mcp_servers:
+  scrapy-mcp:
+    type: stdio
+    command: uv
+    args: ["run", "--directory", "${PROJECT_ROOT}", "scrapy-mcp"]

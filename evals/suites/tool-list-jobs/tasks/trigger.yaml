@@ -1,0 +1,18 @@
+description: |
+  The agent should reach for list_jobs when asked about the Scrapy crawls
+  running on this machine, or when it needs to attach to one, and not for
+  Scrapy questions that involve no live crawl: writing a spider, Scrapy Cloud
+  jobs, or how Scrapy works.
+kind: trigger
+mcp_tool: list_jobs
+
+positive:
+  - Which Scrapy crawls are running on this machine right now?
+  - Attach to my running books spider and tell me how many items it has scraped so far.
+  - Is the Scrapy crawl I started earlier still alive?
+  - My Scrapy spider seems stuck. Can you look at what it is doing?
+
+negative:
+  - Write a Scrapy spider that scrapes the book titles and prices from https://books.toscrape.com/.
+  - How many jobs are running in my Scrapy Cloud project right now?
+  - What does the DOWNLOAD_DELAY setting do in Scrapy?

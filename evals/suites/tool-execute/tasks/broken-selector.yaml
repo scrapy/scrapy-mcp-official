@@ -1,0 +1,26 @@
+description: |
+  Exploring a fix read-only. The spider's upc selector, td.upc, matches
+  nothing on the book pages, and a working one has to be tried against a real
+  response, which the live crawl can download.
+
+setup:
+  fixture: books-crawl
+
+prompt: |
+  The books spider in books.py is running on this machine, and every item it
+  scrapes has upc set to None. Using the running crawl, find a selector that
+  extracts the UPC and confirm that it works. Do not modify the spider or the
+  crawl.
+
+assertions:
+  - mcp_tool_called: execute
+  - judge: >
+      The agent's final answer proposes a CSS selector or XPath that extracts
+      the UPC from a book page (e.g. the first cell of the product information
+      table, or the td next to the "UPC" th), and the trajectory shows it was
+      tried against a book page response obtained through the execute tool
+      (e.g. via crawler.engine.download_async) and yielded a UPC value.
+  - judge: >
+      No code sent through the execute tool changes the crawl: no assignments
+      to crawler, engine, spider or settings attributes, no engine pause or
+      stop, no replacement of the spider's callbacks.

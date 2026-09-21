@@ -1,0 +1,13 @@
+description: |
+  Plain discovery. The fixture crawl runs the "books" spider, so the listing
+  must include it and report it as healthy.
+
+prompt: |
+  List the Scrapy crawls I can attach to.
+
+assertions:
+  - mcp_tool_called: list_jobs
+  - judge: >
+      The agent's final answer lists a crawl running the "books" spider and
+      reports it as healthy (an "ok" health verdict), with a job id or pid
+      taken from the tool output.

@@ -21,7 +21,18 @@ from .client import CrawlClient, RequestError
 from .job_files import JobError, JobInfo, JobRegistry
 from .reference import EXECUTE_TOOL_DESC, INSPECTION_REFERENCE
 
-app = MCPServer("scrapy-mcp")
+app = MCPServer(
+    "scrapy-mcp",
+    instructions=(
+        "Inspect and control Scrapy crawls running as processes on this machine."
+        " Whenever the user asks about a crawl that is currently running (whether it"
+        " is alive, its progress, stats, effective settings, in-flight requests,"
+        " enabled components, why it is slow or stuck), call list_jobs to find it and"
+        " execute to read its live state, which is the source of truth: source files"
+        " and logs only show what was configured. Scrapy Cloud jobs are out of scope;"
+        " these tools only see local processes."
+    ),
+)
 
 # Hints for the client, not a permission check. The read-only tools only talk to a
 # job of ours on localhost, so their world is closed. `destructive_hint` and
@@ -86,7 +97,10 @@ def _job(job_id: str) -> JobInfo:
 
 
 @app.tool(
-    description="List attachable live Scrapy crawls and check each one's health.",
+    description=(
+        "List the Scrapy crawls running as local processes on this machine that this"
+        " server can attach to, and check each one's health."
+    ),
     annotations=READ_ONLY,
     structured_output=False,
 )

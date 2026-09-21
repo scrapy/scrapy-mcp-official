@@ -1,0 +1,17 @@
+description: |
+  Effective settings are read off the live crawl, not assumed from Scrapy's
+  defaults. The fixture spider sets DOWNLOAD_DELAY to 1 and
+  CONCURRENT_REQUESTS_PER_DOMAIN to 2 through custom_settings.
+
+prompt: |
+  The books crawl running on this machine seems slow. What download delay and
+  per-domain concurrency is it actually running with?
+
+assertions:
+  - mcp_tool_called: execute
+  - judge: >
+      The agent's final answer states a download delay of 1 second and a
+      per-domain concurrency of 2, and both values appear in the output of an
+      execute tool call (crawler.settings or the downloader slot). Values
+      taken from the spider's source code or its log instead, or Scrapy's
+      defaults (0 and 8), fail.
