@@ -14,6 +14,8 @@ and inspect, debug, and steer it from the inside — by running async Python
 Scrapy's telnet console: the agent writes a snippet, it runs on the crawl's own
 event loop, and the output comes back.
 
+[![Introduction to the Scrapy MCP server (video)](https://img.youtube.com/vi/AP17jPrlAzY/maxresdefault.jpg)](https://www.youtube.com/watch?v=AP17jPrlAzY)
+
 ## What you can ask it
 
 Once attached, the agent can answer the operational questions you'd otherwise
